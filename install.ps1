@@ -5,7 +5,7 @@
 
 .USAGE
     # One-command from project root:
-    iex (irm https://raw.githubusercontent.com/lopatkm/servicenet-qa-framework/main/install.ps1)
+    & ([scriptblock]::Create([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String(((irm https://api.github.com/repos/lopatkm/servicenet-qa-framework/contents/install.ps1).content -replace '\n',''))))) -Force
 
     # Local (after cloning ai-agent-config):
     & "$env:CODE_DIR\ai-agent-config\qa-template\install.ps1"

@@ -22,13 +22,23 @@ This framework solves three problems:
 
 ## Quick Start (5 minutes)
 
+### Option 1: One-command installer (from any project root)
+
+```powershell
+& ([scriptblock]::Create([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String(((irm https://api.github.com/repos/lopatkm/servicenet-qa-framework/contents/install.ps1).content -replace '\n',''))))) -Force
+```
+
+This scaffolds all three test projects (Unit, Integration, E2E), GitHub Actions workflows, and tooling. Existing files are never overwritten — safe to re-run.
+
+### Option 2: Claude Code skill
+
 Open the target project in Claude Code and run:
 
 ```
 /setup-testing
 ```
 
-That's it. The skill reads `CLAUDE.md`, discovers Blazor pages and stored procedures, presents a plan for your approval, then creates all three test projects, wires GitHub Actions, and writes starter tests.
+The skill reads `CLAUDE.md`, discovers Blazor pages and stored procedures, presents a plan for your approval, then creates all three test projects, wires GitHub Actions, and writes starter tests.
 
 To apply to a new ServiceNet project from scratch, see [Applying to a New Project](#applying-to-a-new-servicenet-project).
 
