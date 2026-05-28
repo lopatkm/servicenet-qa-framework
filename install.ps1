@@ -82,12 +82,12 @@ $created = [System.Collections.Generic.List[string]]::new()
 $skipped = [System.Collections.Generic.List[string]]::new()
 
 function Write-File([string]$RelPath, [string]$Content) {
-    $full = Join-Path $script:root $RelPath
+    $full = Join-Path $root $RelPath
     $dir  = Split-Path $full -Parent
     if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }
-    if (Test-Path $full) { $script:skipped.Add($RelPath); return }
+    if (Test-Path $full) { $skipped.Add($RelPath); return }
     [IO.File]::WriteAllText($full, $Content, [Text.Encoding]::UTF8)
-    $script:created.Add($RelPath)
+    $created.Add($RelPath)
     Write-Host "  + $RelPath" -ForegroundColor Green
 }
 
