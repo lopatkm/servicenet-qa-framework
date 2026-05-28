@@ -5,7 +5,7 @@
 
 .USAGE
     # One-command from project root:
-    iex (irm https://raw.githubusercontent.com/lopatkm/-servicenet-qa-framework/main/install.ps1)
+    iex (irm https://raw.githubusercontent.com/lopatkm/servicenet-qa-framework/main/install.ps1)
 
     # Local (after cloning ai-agent-config):
     & "$env:CODE_DIR\ai-agent-config\qa-template\install.ps1"
@@ -35,7 +35,8 @@ param(
     [string]$Namespace     = "",
     [string]$AppUrl        = "https://localhost:7052",
     [string]$ConnStrEnvVar = "",
-    [switch]$SkipWorkflows
+    [switch]$SkipWorkflows,
+    [switch]$Force
 )
 
 Set-StrictMode -Version Latest
@@ -70,8 +71,10 @@ Write-Host "  Conn var:     $ConnStrEnvVar"
 Write-Host "  Root:         $root"
 Write-Host ""
 
-$confirm = Read-Host "Create test projects? [Y/n]"
-if ($confirm -and $confirm -match '^[Nn]') { Write-Host "Aborted."; exit 0 }
+if (-not $Force) {
+    $confirm = Read-Host "Create test projects? [Y/n]"
+    if ($confirm -and $confirm -match '^[Nn]') { Write-Host "Aborted."; exit 0 }
+}
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -595,7 +598,7 @@ if (Test-Path $reportDest) {
     # 2. Download from GitHub as fallback
     if (-not $obtained) {
         try {
-            $dlUrl = "https://raw.githubusercontent.com/lopatkm/-servicenet-qa-framework/main/Generate-QualityReport.ps1"
+            $dlUrl = "https://raw.githubusercontent.com/lopatkm/servicenet-qa-framework/main/Generate-QualityReport.ps1"
             Invoke-WebRequest -Uri $dlUrl -OutFile $reportDest -UseBasicParsing -ErrorAction Stop
             $created.Add("tools/Generate-QualityReport.ps1")
             Write-Host "  + tools/Generate-QualityReport.ps1 (downloaded)" -ForegroundColor Green
