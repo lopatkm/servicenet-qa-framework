@@ -1,0 +1,32 @@
+name: QA Smoke Tests
+
+on:
+  workflow_run:
+    workflows: ["Deploy to Test"]
+    types: [completed]
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    runs-on: [self-hosted, test-runner]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Install Playwright browsers
+        run: pwsh tests/YourApp.Tests.E2E/bin/Debug/net10.0/playwright.ps1 install chromium
+      - name: Run smoke tests
+        env:
+          E2E_BASE_URL: https://testdirectordashboard.servicenet.org
+          E2E_AUTH_PATH: ${{ secrets.E2E_AUTH_JSON_PATH }}
+          E2E_HEADLESS: "true"
+        run: dotnet test --filter "Category=Smoke" --logger "trx;LogFileName=smoke-results.trx"
+      - name: Publish test results
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Smoke Test Results
+          path: "**/*.trx"
+          reporter: dotnet-trx
