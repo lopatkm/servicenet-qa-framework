@@ -5,7 +5,7 @@
 
 .USAGE
     # One-command from project root:
-    & ([scriptblock]::Create([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String(((irm https://api.github.com/repos/lopatkm/servicenet-qa-framework/contents/install.ps1).content -replace '\n',''))))) -Force
+    & ([scriptblock]::Create([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String(((irm https://api.github.com/repos/lopatkm/qa-automation/contents/install.ps1).content -replace '\n',''))))) -Force
 
     # Local (after cloning ai-agent-config):
     & "$env:CODE_DIR\ai-agent-config\qa-template\install.ps1"
@@ -598,7 +598,7 @@ if (Test-Path $reportDest) {
     # 2. Download from GitHub as fallback
     if (-not $obtained) {
         try {
-            $dlUrl = "https://raw.githubusercontent.com/lopatkm/servicenet-qa-framework/main/Generate-QualityReport.ps1"
+            $dlUrl = "https://raw.githubusercontent.com/lopatkm/qa-automation/main/Generate-QualityReport.ps1"
             Invoke-WebRequest -Uri $dlUrl -OutFile $reportDest -UseBasicParsing -ErrorAction Stop
             $created.Add("tools/Generate-QualityReport.ps1")
             Write-Host "  + tools/Generate-QualityReport.ps1 (downloaded)" -ForegroundColor Green

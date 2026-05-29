@@ -25,7 +25,7 @@ This framework solves three problems:
 ### Option 1: One-command installer (from any project root)
 
 ```powershell
-& ([scriptblock]::Create([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String(((irm https://api.github.com/repos/lopatkm/servicenet-qa-framework/contents/install.ps1).content -replace '\n',''))))) -Force
+& ([scriptblock]::Create([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String(((irm https://api.github.com/repos/lopatkm/qa-automation/contents/install.ps1).content -replace '\n',''))))) -Force
 ```
 
 This scaffolds all three test projects (Unit, Integration, E2E), GitHub Actions workflows, and tooling. Existing files are never overwritten — safe to re-run.
