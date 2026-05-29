@@ -763,14 +763,100 @@ jobs:
 
 $gitignorePath = Join-Path $root ".gitignore"
 if (Test-Path $gitignorePath) {
-    $gi      = Get-Content $gitignorePath -Raw
-    $entries = @("auth.json", "test-report.html", "**/TestResults/")
-    $toAdd   = $entries | Where-Object { $gi -notmatch [regex]::Escape($_) }
-    if ($toAdd) {
-        Add-Content -Path $gitignorePath -Value ("`n# ServiceNet QA Framework`n" + ($toAdd -join "`n"))
+    $gi = Get-Content $gitignorePath -Raw
+
+    # QA framework artifacts
+    $qaEntries = @("auth.json", "test-report.html", "**/TestResults/")
+    $qaToAdd   = $qaEntries | Where-Object { $gi -notmatch [regex]::Escape($_) }
+    if ($qaToAdd) {
+        Add-Content -Path $gitignorePath -Value ("`n# ServiceNet QA Framework`n" + ($qaToAdd -join "`n"))
         Write-Host ""
-        Write-Host "  Updated .gitignore (+$($toAdd.Count) entries)" -ForegroundColor Green
+        Write-Host "  Updated .gitignore (+$($qaToAdd.Count) QA entries)" -ForegroundColor Green
     }
+
+    # ServiceNet data protection standard (PHI/PII safety) — from templates/gitignore-servicenet
+    $dataEntries = @("*.csv", "*.xlsx", "*.xls", "*.bak", "*.bacpac", "*.dacpac",
+                     "appsettings.Development.json", "appsettings.*.local.json",
+                     "*.pfx", "*.key", "*.pem", "secrets/", ".env", ".env.*")
+    $dataToAdd   = $dataEntries | Where-Object { $gi -notmatch [regex]::Escape($_) }
+    if ($dataToAdd) {
+        Add-Content -Path $gitignorePath -Value ("`n# ServiceNet data protection (PHI/PII safety)`n" + ($dataToAdd -join "`n"))
+        Write-Host "  Updated .gitignore (+$($dataToAdd.Count) data protection entries)" -ForegroundColor Green
+    }
+} else {
+    # No .gitignore — create one with all ServiceNet standard entries
+    [IO.File]::WriteAllText($gitignorePath, @"
+# Build artifacts
+**/bin/
+**/obj/
+
+# ServiceNet QA Framework
+auth.json
+test-report.html
+**/TestResults/
+
+# ServiceNet data protection (PHI/PII safety)
+*.csv
+*.xlsx
+*.xls
+*.bak
+*.bacpac
+*.dacpac
+appsettings.Development.json
+appsettings.*.local.json
+*.pfx
+*.key
+*.pem
+secrets/
+.env
+.env.*
+
+# IDE
+.vs/
+*.user
+*.suo
+
+# OS
+.DS_Store
+Thumbs.db
+"@, [Text.Encoding]::UTF8)
+    Write-Host ""
+    Write-Host "  Created .gitignore with ServiceNet standard entries" -ForegroundColor Green
+}
+
+# ─── CLAUDE.md update ─────────────────────────────────────────────────────────
+
+$claudeMdPath = Join-Path $root "CLAUDE.md"
+if ((Test-Path $claudeMdPath) -and ((Get-Content $claudeMdPath -Raw) -notmatch '## Testing')) {
+    $testSection = @"
+
+## Testing
+
+Run unit and integration tests (no browser, no auth required):
+
+``````powershell
+.\Run-Tests.ps1
+``````
+
+Set the connection string env var to include integration tests:
+
+``````powershell
+`$env:$ConnStrEnvVar = "Server=...;Integrated Security=true;Encrypt=Optional;"
+``````
+
+Run a specific category directly:
+
+``````powershell
+dotnet test -c Release --filter "Category=Unit"
+dotnet test -c Release --filter "Category=Integration"
+dotnet test -c Release --filter "Category=Regression"
+``````
+
+Test projects are in ``tests/``. Framework docs: https://github.com/lopatkm/qa-automation
+"@
+    Add-Content -Path $claudeMdPath -Value $testSection
+    Write-Host ""
+    Write-Host "  Updated CLAUDE.md (+ Testing section)" -ForegroundColor Green
 }
 
 # ─── Summary ──────────────────────────────────────────────────────────────────
@@ -801,7 +887,7 @@ if ($created.Count -gt 0) {
     Write-Host "     dotnet test -c Release --logger `"trx;LogFileName=results.trx`""
     Write-Host "     .\tools\Generate-QualityReport.ps1 -Open"
     Write-Host ""
-    Write-Host "  Docs:  ai-agent-config/qa-template/README.md" -ForegroundColor DarkGray
+    Write-Host "  Docs:  https://github.com/lopatkm/qa-automation" -ForegroundColor DarkGray
     Write-Host "  Skill: /setup-testing in Claude Code adds tests for specific pages" -ForegroundColor DarkGray
 }
 
