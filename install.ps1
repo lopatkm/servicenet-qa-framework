@@ -302,7 +302,7 @@ internal static class AuthStateManager
         if (!File.Exists(TestConfig.AuthStatePath))
             throw new InvalidOperationException(
                 $"Azure AD auth state not found at '{TestConfig.AuthStatePath}'. " +
-                "Run: node qa-save-auth.js --url <app-url> from the repo root.");
+                "See ai-agent-config/qa-template/README.md for CI auth setup.");
     }
 }
 '@)
@@ -609,58 +609,65 @@ if (Test-Path $reportDest) {
     }
 }
 
-# ─── Auth capture helper ───────────────────────────────────────────────────────
+# ─── Run-Tests.ps1 ────────────────────────────────────────────────────────────
 
 Write-Host ""
-Write-Host "Auth capture helper (qa-save-auth.js) ..." -ForegroundColor Yellow
+Write-Host "Run-Tests.ps1 ..." -ForegroundColor Yellow
 
-$saveAuthPath = Join-Path $root "qa-save-auth.js"
-if (-not (Test-Path $saveAuthPath)) {
-    [IO.File]::WriteAllText($saveAuthPath, @'
-/**
- * qa-save-auth.js - Captures Azure AD session state for Playwright E2E tests.
- *
- * Usage:
- *   node qa-save-auth.js --url https://localhost:7052
- *   node qa-save-auth.js --url https://yourtestapp.servicenet.org
- *
- * Opens a browser window. Sign in, then close the tab.
- * Saves the session to auth.json. Re-run when expired (typically 24h-90d).
- * auth.json is gitignored - never commit it.
- */
+$runTestsPath = Join-Path $root "Run-Tests.ps1"
+if (-not (Test-Path $runTestsPath)) {
+    [IO.File]::WriteAllText($runTestsPath, (Apply @'
+<#
+.SYNOPSIS
+    Run QA tests for {{AppName}}.
+    Runs Unit and Integration tests. No browser, no auth required.
 
-const { chromium } = require('playwright');
+.USAGE
+    .\Run-Tests.ps1
+#>
 
-const args   = process.argv.slice(2);
-const getArg = key => { const i = args.indexOf(key); return i !== -1 ? args[i + 1] : null; };
-const url    = getArg('--url') || 'https://localhost:7052';
-const out    = getArg('--out') || 'auth.json';
+$connVar  = "{{ConnStrEnvVar}}"
+$hasConn  = [bool][System.Environment]::GetEnvironmentVariable($connVar)
+$root     = $PSScriptRoot
 
-(async () => {
-    console.log(`Opening browser - sign in at ${url}`);
-    console.log('Close the browser tab when the dashboard is visible.\n');
+Write-Host ""
+Write-Host "{{AppName}} -- QA Tests" -ForegroundColor Cyan
+Write-Host "=======================================" -ForegroundColor Cyan
+Write-Host ""
 
-    const browser = await chromium.launch({ headless: false, ignoreHTTPSErrors: true });
-    const context = await browser.newContext({ ignoreHTTPSErrors: true });
-    const page    = await context.newPage();
+Write-Host "Running Unit tests..." -ForegroundColor White
+dotnet test "$root\tests\{{AppName}}.Tests\{{AppName}}.Tests.csproj" `
+    -c Release --filter "Category=Unit" --logger "console;verbosity=quiet" --nologo
+$unitExit = $LASTEXITCODE
 
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 120000 });
-    await page.waitForURL(
-        u => !u.includes('microsoftonline') && !u.includes('login.microsoft'),
-        { timeout: 120000 }
-    );
-
-    await context.storageState({ path: out });
-    console.log(`\nSession saved to ${out}`);
-    console.log('Run E2E tests: dotnet test --filter "Category=Smoke"');
-
-    await browser.close();
-})().catch(err => { console.error(err.message); process.exit(1); });
-'@, [Text.Encoding]::UTF8)
-    $created.Add("qa-save-auth.js")
-    Write-Host "  + qa-save-auth.js" -ForegroundColor Green
+if ($hasConn) {
+    Write-Host ""
+    Write-Host "Running Integration tests..." -ForegroundColor White
+    dotnet test "$root\tests\{{AppName}}.Tests.Integration\{{AppName}}.Tests.Integration.csproj" `
+        -c Release --filter "Category=Integration" --logger "console;verbosity=quiet" --nologo
+    $intExit = $LASTEXITCODE
 } else {
-    $skipped.Add("qa-save-auth.js")
+    Write-Host ""
+    Write-Host "Skipping Integration tests -- $connVar not set." -ForegroundColor Yellow
+    Write-Host "  To run them: `$env:$connVar = 'Server=...;Database=...;Integrated Security=true;Encrypt=Optional;'" -ForegroundColor DarkGray
+    $intExit = 0
+}
+
+Write-Host ""
+Write-Host "=======================================" -ForegroundColor Cyan
+if ($unitExit -eq 0 -and $intExit -eq 0) {
+    Write-Host "All tests passed." -ForegroundColor Green
+} else {
+    Write-Host "One or more tests failed." -ForegroundColor Red
+}
+Write-Host ""
+
+exit ([Math]::Max($unitExit, $intExit))
+'@), [Text.Encoding]::UTF8)
+    $created.Add("Run-Tests.ps1")
+    Write-Host "  + Run-Tests.ps1" -ForegroundColor Green
+} else {
+    $skipped.Add("Run-Tests.ps1")
 }
 
 # ─── GitHub Actions workflows ──────────────────────────────────────────────────
@@ -784,22 +791,14 @@ if ($created.Count -gt 0) {
     Write-Host "  2. Build:" -ForegroundColor Yellow
     Write-Host "     dotnet build"
     Write-Host ""
-    Write-Host "  3. Install Playwright browsers:" -ForegroundColor Yellow
-    Write-Host "     pwsh tests/$AppName.Tests.E2E/bin/Debug/net10.0/playwright.ps1 install chromium"
+    Write-Host "  3. Run tests:" -ForegroundColor Yellow
+    Write-Host "     .\Run-Tests.ps1"
     Write-Host ""
-    Write-Host "  4. Run unit tests:" -ForegroundColor Yellow
-    Write-Host "     dotnet test --filter `"Category=Unit`""
-    Write-Host ""
-    Write-Host "  5. Set integration test connection string and run:" -ForegroundColor Yellow
+    Write-Host "  4. (Optional) Set connection string for integration tests:" -ForegroundColor Yellow
     Write-Host "     `$env:$ConnStrEnvVar = `"Server=...;Integrated Security=true;Encrypt=Optional;`""
-    Write-Host "     dotnet test --filter `"Category=Integration`""
     Write-Host ""
-    Write-Host "  6. Capture Azure AD session and run E2E smoke tests:" -ForegroundColor Yellow
-    Write-Host "     node qa-save-auth.js --url $AppUrl"
-    Write-Host "     dotnet test --filter `"Category=Smoke`""
-    Write-Host ""
-    Write-Host "  7. Generate the HTML quality report:" -ForegroundColor Yellow
-    Write-Host "     dotnet test --logger `"trx;LogFileName=results.trx`""
+    Write-Host "  5. (Optional) Generate the HTML quality report:" -ForegroundColor Yellow
+    Write-Host "     dotnet test -c Release --logger `"trx;LogFileName=results.trx`""
     Write-Host "     .\tools\Generate-QualityReport.ps1 -Open"
     Write-Host ""
     Write-Host "  Docs:  ai-agent-config/qa-template/README.md" -ForegroundColor DarkGray
