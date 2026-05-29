@@ -1,42 +1,48 @@
-# ServiceNet QA Framework
+# ServiceNet QA Automation
 
-A three-tier automated test suite for ServiceNet Blazor Server applications. Provides consistent test structure, shared infrastructure, and management-readable reporting across every IS project.
+A test scaffolding and automation tool for ServiceNet Blazor Server applications. Gives every IS project a consistent set of unit and integration tests, a one-command developer test runner, and a GitHub Actions regression suite.
 
 ---
 
 ## Overview
 
-ServiceNet IS maintains a growing portfolio of internal Blazor Server dashboards. Each app handles sensitive operational data — financial metrics, claims, documentation compliance, workforce analytics — adjacent to protected health information. That combination demands enterprise-grade quality assurance that goes beyond "does it deploy."
+ServiceNet IS developers use this framework to catch bugs before they reach production. The developer-facing workflow is a single script — `Run-Tests.ps1` — that runs unit and integration tests with no browser, no auth, and no manual steps. GitHub Actions handles the rest automatically after each deploy.
 
-This framework solves three problems:
+This framework provides:
 
-1. **Consistency.** Every ServiceNet app gets the same test categories, the same CI triggers, and the same report format. A new developer or director can read any project's QA output without learning a new system.
+1. **A simple developer QA command.** `.\Run-Tests.ps1` runs unit and integration tests. No setup beyond a connection string. Safe to run at any time, including while the dev server is running.
 
-2. **Right coverage at the right time.** Smoke tests run in under 2 minutes after every deploy. Full regression runs overnight. Integration tests run whenever the database is reachable. You never block a deploy waiting for slow tests, and you never skip the thorough checks.
+2. **Consistent test structure across every app.** Same categories, same project layout, same CI triggers. Any IS developer can pick up any project and run its tests without learning a new system.
 
-3. **Management-readable output.** The HTML quality report summarizes pass/fail by category in plain language suitable for IS leadership review.
+3. **Automated CI coverage.** Smoke tests trigger after every deploy to test. A full regression suite runs nightly. Neither requires developer action.
 
-**Target audience:** ServiceNet IS developers. The `/setup-testing` skill in Claude Code is the single entry point — it scaffolds everything automatically from this template.
+**Target audience:** ServiceNet IS developers.
 
 ---
 
-## Quick Start (5 minutes)
+## Quick Start
 
-### Option 1: One-command installer (from any project root)
+### Step 1: Scaffold the test projects (one-time per project)
+
+From the project root in PowerShell:
 
 ```powershell
 & ([scriptblock]::Create([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String(((irm https://api.github.com/repos/lopatkm/qa-automation/contents/install.ps1).content -replace '\n',''))))) -Force
 ```
 
-This scaffolds all three test projects (Unit, Integration, E2E), GitHub Actions workflows, and tooling. Existing files are never overwritten — safe to re-run.
+Scaffolds Unit, Integration, and E2E test projects plus `Run-Tests.ps1`. Existing files are never overwritten — safe to re-run.
 
-### Option 2: Claude Code skill
+### Step 2: Run tests
 
-Open the target project in Claude Code and run:
-
+```powershell
+.\Run-Tests.ps1
 ```
-/setup-testing
-```
+
+Unit tests run immediately. Integration tests run automatically if the connection string env var is set.
+
+### Option: Claude Code skill
+
+Open the project in Claude Code and run `/setup-testing` to scaffold and write starter tests tailored to the app's pages and stored procedures.
 
 The skill reads `CLAUDE.md`, discovers Blazor pages and stored procedures, presents a plan for your approval, then creates all three test projects, wires GitHub Actions, and writes starter tests.
 
